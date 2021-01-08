@@ -191,7 +191,13 @@ function styleDiff(oldStyle, newStyle) {
   return diff;
 }
 
-function styleUpdater(viewDescriptor, updater, state, maybeViewRef) {
+function styleUpdater(
+  viewDescriptor,
+  updater,
+  state,
+  maybeViewRef,
+  useAdapter
+) {
   'worklet';
   const animations = state.animations || {};
   const newValues = updater() || {};
@@ -239,7 +245,7 @@ function styleUpdater(viewDescriptor, updater, state, maybeViewRef) {
     });
 
     if (Object.keys(updates).length) {
-      updateProps(viewDescriptor, updates, maybeViewRef);
+      updateProps(viewDescriptor, updates, maybeViewRef, useAdapter);
     }
 
     if (!allFinished) {
@@ -270,11 +276,11 @@ function styleUpdater(viewDescriptor, updater, state, maybeViewRef) {
   state.last = Object.assign({}, oldValues, newValues);
 
   if (Object.keys(diff).length !== 0) {
-    updateProps(viewDescriptor, diff, maybeViewRef);
+    updateProps(viewDescriptor, diff, maybeViewRef, useAdapter);
   }
 }
 
-export function useAnimatedStyle(updater, dependencies) {
+export function useAnimatedStyle(updater, dependencies, useAdapter) {
   const viewDescriptor = useSharedValue({ tag: -1, name: null }, false);
   const initRef = useRef(null);
   const inputs = Object.values(updater._closure);
@@ -301,7 +307,13 @@ export function useAnimatedStyle(updater, dependencies) {
   useEffect(() => {
     const fun = () => {
       'worklet';
-      styleUpdater(viewDescriptor, updater, remoteState, maybeViewRef);
+      styleUpdater(
+        viewDescriptor,
+        updater,
+        remoteState,
+        maybeViewRef,
+        useAdapter
+      );
     };
     const mapperId = startMapper(fun, inputs, []);
     return () => {
@@ -417,7 +429,8 @@ function areDependenciesEqual(nextDeps, prevDeps) {
   var objectIs = typeof Object.is === 'function' ? Object.is : is;
 
   function areHookInputsEqual(nextDeps, prevDeps) {
-    if (!nextDeps || !prevDeps || (prevDeps.length !== nextDeps.length)) return !1;
+    if (!nextDeps || !prevDeps || prevDeps.length !== nextDeps.length)
+      return !1;
     for (var i = 0; i < prevDeps.length && i < nextDeps.length; i++)
       if (!objectIs(nextDeps[i], prevDeps[i])) return !1;
     return !0;
